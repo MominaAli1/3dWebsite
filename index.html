@@ -58,12 +58,12 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    Each value has a comment explaining what it does.
    ============================================================= */
 
-const FOV = 40;
+const FOV = 60;
 // Field of view in degrees.
 //   20 = telephoto (zoomed in, flattering for models)
 //   70 = wide angle (sees more, distorted edges)
 
-const SIZE = 2.4;
+const SIZE = 1.8;
 // How big the model appears on screen.
 //   1.0 = small, 5.0 = large
 //   Adjust until your model fills the viewport nicely.
@@ -82,7 +82,7 @@ const EXPOSURE = 1.05;
 //   height = vertical position (0 = level, positive = above, negative = below)
 //   angle  = horizontal angle in radians (0 = front, 3.14 = back, 6.28 = full circle)
 
-const START = { radius: 5.0, height: 1.2, angle: 0.0 };
+const START = { radius: 5.0, height: 1.0, angle: 0.0 };
 // Camera at the top of the page (before scrolling)
 
 const END = { radius: 3.2, height: 0.1, angle: Math.PI * 0.85 };
