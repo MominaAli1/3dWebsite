@@ -3,29 +3,200 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Animate a 3D model with code</title>
+<title>Studio</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-  /* White page. Text sits on top of the 3D canvas. */
-  body { margin: 0; background: #ffffff; color: #16191A; font-family: system-ui, sans-serif; }
-  canvas { display: block; }
-
-  /* The 3D canvas fills the window and sits BEHIND the text. */
-  #scene { position: fixed; inset: 0; z-index: 0; }
-
-  /* Your text, layered on top. pointer-events:none lets you still
-     drag/rotate the model through the text. */
-  #text {
-    position: relative; z-index: 1;
-    max-width: 620px;
-    padding: 14vh 30px 40px;
-    pointer-events: none;
+  :root {
+    --sweep:  #D2D6D8;   /* studio seamless, top of the sweep */
+    --floor:  #AEB5B8;   /* where the sweep meets the floor */
+    --ink:    #16191A;
+    --muted:  #6B7477;
+    --axis:   #2B57F5;   /* viewport gizmo blue */
+    --hairline: rgba(22,25,26,0.14);
   }
-  #text h1 { font-size: clamp(2.2rem, 7vw, 4.4rem); line-height: 1; margin: 0 0 20px; }
-  #text p  { font-size: 1.05rem; line-height: 1.6; max-width: 46ch; margin: 0 0 16px; }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--sweep);
+    color: var(--ink);
+    font-family: 'Archivo', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- the canvas sits fixed behind everything and never scrolls ---- */
+  #scene {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* the sweep gradient, painted behind the canvas */
+  #sweep {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(180deg, var(--sweep) 0%, var(--sweep) 55%, var(--floor) 100%);
+  }
+
+  /* ---- everything readable scrolls on top ---- */
+  .page { position: relative; z-index: 2; }
+
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 22px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    mix-blend-mode: multiply;
+  }
+
+  header b { color: var(--ink); font-weight: 600; }
+
+  /* ---- hero ---- */
+  .hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 28px 96px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 9vw, 7.5rem);
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    margin: 0;
+    max-width: 14ch;
+    mix-blend-mode: multiply;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--axis);
+  }
+
+  /* ---- the HUD strip: real numbers from the scene ---- */
+  .hud {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 3;
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--hairline);
+    background: rgba(210,214,216,0.82);
+    backdrop-filter: blur(8px);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .hud div {
+    flex: 1;
+    padding: 10px 14px;
+    border-right: 1px solid var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .hud div:last-child { border-right: none; }
+  .hud span { color: var(--muted); letter-spacing: 0.1em; }
+  .hud output { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---- content sections ---- */
+  section.block {
+    min-height: 88vh;
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+  }
+
+  .card {
+    max-width: 46ch;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--hairline);
+    padding: 34px 32px;
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+
+  .card.in { opacity: 1; transform: none; }
+
+  .card.right { margin-left: auto; }
+
+  .card h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+
+  .card p {
+    margin: 0;
+    line-height: 1.55;
+    color: #2C3234;
+    font-size: 0.98rem;
+  }
+
+  .card .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--axis);
+    margin-bottom: 14px;
+  }
+
+  footer {
+    padding: 90px 28px 120px;
+    border-top: 1px solid var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .card { transition: none; opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 640px) {
+    .hud div:nth-child(n+4) { display: none; }
+    .hero { padding-bottom: 110px; }
+  }
 </style>
 
-<!-- Tells the browser where to load Three.js from -->
 <script type="importmap">
 {
   "imports": {
@@ -38,17 +209,57 @@
 
 <body>
 
-<!-- The 3D canvas gets injected here -->
+<div id="sweep"></div>
 <div id="scene"></div>
 
-<!-- ===========================================================
-     YOUR TEXT — edit anything between the tags.
-     Copy a <p> line to add another paragraph.
-     =========================================================== -->
-<div id="text">
-  <h1>A BOTTLE</h1>
-  <p>This is a bottle that I made in Blender.</p>
-  <p>I will now be swinging this bottle around.</p>
+<header>
+  <div><b>CGI FORGE</b> / viewport</div>
+  <div>drag to orbit &nbsp;·&nbsp; scroll to move camera</div>
+</header>
+
+<div class="page">
+
+  <div class="hero">
+    <div class="eyebrow">glTF binary · loaded in browser</div>
+    <h1>The object is <em>live</em>, not a picture of one.</h1>
+  </div>
+
+  <section class="block">
+    <div class="card">
+      <div class="tag">01 / geometry</div>
+      <h2>Same mesh, different renderer</h2>
+      <p>What you exported from Blender is drawing here in real time through WebGL. No frames were rendered ahead of time. Rotate it and the shading recalculates every frame.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="card right">
+      <div class="tag">02 / lighting</div>
+      <h2>Lights don't travel in the file</h2>
+      <p>A .glb carries geometry, materials and textures. It carries no lighting at all. Everything you see here comes from an environment map generated in the browser, which is why swapping that one line changes the entire look.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="card">
+      <div class="tag">03 / motion</div>
+      <h2>Two kinds of animation</h2>
+      <p>Keyframes made in Blender ride along inside the file and play back on a mixer. The camera move you're triggering right now was never in Blender. It's reading your scroll position and nothing else.</p>
+    </div>
+  </section>
+
+  <footer>
+    Blender → glTF → three.js &nbsp;·&nbsp; edit index.html to change everything
+  </footer>
+
+</div>
+
+<div class="hud">
+  <div><span>CAM.X</span><output id="cx">0.00</output></div>
+  <div><span>CAM.Y</span><output id="cy">0.00</output></div>
+  <div><span>CAM.Z</span><output id="cz">0.00</output></div>
+  <div><span>SCROLL</span><output id="sp">0%</output></div>
+  <div><span>FPS</span><output id="fp">0</output></div>
 </div>
 
 <script type="module">
@@ -57,115 +268,183 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+/* ------------------------------------------------------------------
+   1. THE THREE ESSENTIALS
+   Every three.js scene needs a scene, a camera, and a renderer.
+   ------------------------------------------------------------------ */
 
-/* ============================================================
-   TWEAK ZONE — change a number, save, reload.
-   ============================================================ */
-
-const FOV      = 20;    // camera lens: 20 = zoomed in, 70 = wide angle
-const SIZE     = 2.4;   // how big the model is on screen
-const EXPOSURE = 1.05;  // brightness: 0.6 dark, 1.6 bright
-const SPIN     = 0.0;   // spin speed in radians/second (0 = no spin)
-
-
-/* ============================================================
-   THE 3D WORLD — scene, camera, renderer. Set up once.
-   ============================================================ */
-
-// The scene holds everything you can see.
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);   // white backdrop
 
-// The camera is your eye. Here we place it a bit up and back.
-const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1, 6);
+const camera = new THREE.PerspectiveCamera(
+  38,                                  // field of view, lower = more telephoto
+  innerWidth / innerHeight,
+  0.1,                                 // near clip
+  100                                  // far clip
+);
 
-// The renderer draws the scene onto the page.
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = EXPOSURE;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));   // caps cost on retina
+renderer.toneMapping = THREE.ACESFilmicToneMapping;      // filmic rolloff, like Blender's Filmic
+renderer.toneMappingExposure = 1.05;
 document.getElementById('scene').appendChild(renderer.domElement);
 
-// Soft, even studio lighting (reflections + base fill).
+/* ------------------------------------------------------------------
+   2. LIGHTING
+   A .glb contains no lights. RoomEnvironment fakes a softbox studio.
+   Swap this block for an HDRI when you want real character:
+     import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+     new RGBELoader().load('studio.hdr', t => {
+       t.mapping = THREE.EquirectangularReflectionMapping;
+       scene.environment = t;
+     });
+   ------------------------------------------------------------------ */
+
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-// A direct light from one side, so the model's shape reads clearly.
-// (Especially important now: a white model on a white background needs
-// this shading, or it disappears.) Move the position to change direction.
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-keyLight.position.set(3, 5, 4);
-scene.add(keyLight);
+// one directional light on top, purely to get a readable shadow side
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(3, 5, 4);
+scene.add(key);
 
-// Lets you DRAG to rotate the view and SCROLL to zoom.
+/* ------------------------------------------------------------------
+   3. CONTROLS
+   Drag to orbit. Damping makes it feel weighted instead of twitchy.
+   ------------------------------------------------------------------ */
+
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;   // adds smooth momentum
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.enablePan = false;
+controls.enableZoom = false;        // scroll is reserved for the page
+controls.target.set(0, 0, 0);
 
+/* ------------------------------------------------------------------
+   4. LOAD THE MODEL
+   Put your export next to this file and name it model.glb
+   ------------------------------------------------------------------ */
 
-/* ============================================================
-   LOAD THE MODEL — put model.glb next to this file.
-   ============================================================ */
-
-let model = null;       // becomes your model once it finishes loading
-let baseScale = 1;      // the model's fitted scale (used by the pulse example)
-
-new GLTFLoader().load('model.glb', (gltf) => {
-  model = gltf.scene;
-
-  // Auto-center the model and scale it to SIZE.
-  // IMPORTANT: Blender models are often built far from the origin, so we
-  // SCALE first, then offset by the *scaled* center. Doing it the other
-  // way round lets the scaling fling the model off-screen (black screen!).
-  const box    = new THREE.Box3().setFromObject(model);
-  const length = box.getSize(new THREE.Vector3()).length();
-  const centre = box.getCenter(new THREE.Vector3());
-  baseScale = SIZE / length;
-  model.scale.setScalar(baseScale);
-  model.position.copy(centre).multiplyScalar(-baseScale);
-
-  scene.add(model);
-}, undefined, (err) => console.error('model.glb failed to load:', err));
-
-
-/* ============================================================
-   THE ANIMATION LOOP — runs ~60 times a second.
-   THIS is where you animate with code. Write anything here
-   that changes the model's position / rotation / scale.
-   ============================================================ */
-
+let mixer = null;
 const clock = new THREE.Clock();
 
+new GLTFLoader().load(
+  'model.glb',
+  (gltf) => {
+    const model = gltf.scene;
+
+    // Auto-fit: centre the model and scale it to a predictable size,
+    // so it frames correctly no matter what units you exported in.
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3()).length();
+    const centre = box.getCenter(new THREE.Vector3());
+
+    model.position.sub(centre);                 // move its centre to origin
+    model.scale.setScalar(2.4 / size);          // normalise overall size
+
+    scene.add(model);
+
+    // Play any animation baked in Blender.
+    if (gltf.animations.length) {
+      mixer = new THREE.AnimationMixer(model);
+      mixer.clipAction(gltf.animations[0]).play();
+      console.log('animation clips:', gltf.animations.map(a => a.name));
+    }
+  },
+  undefined,
+  (err) => console.error('model.glb failed to load:', err)
+);
+
+/* ------------------------------------------------------------------
+   5. SCROLL-DRIVEN CAMERA
+   This is the part that has nothing to do with Blender.
+   scrollY becomes a 0..1 value, and that value drives the camera.
+   ------------------------------------------------------------------ */
+
+const START = { radius: 5.0, height: 1.2, angle: 0.0 };
+const END   = { radius: 3.2, height: 0.1, angle: Math.PI * 0.85 };
+
+let scrollProgress = 0;
+let smoothed = 0;
+
+function readScroll() {
+  const max = document.body.scrollHeight - innerHeight;
+  scrollProgress = max > 0 ? Math.min(scrollY / max, 1) : 0;
+}
+addEventListener('scroll', readScroll, { passive: true });
+readScroll();
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* ------------------------------------------------------------------
+   6. THE RENDER LOOP
+   Runs roughly 60 times a second. Everything that changes goes here.
+   ------------------------------------------------------------------ */
+
+const cx = document.getElementById('cx');
+const cy = document.getElementById('cy');
+const cz = document.getElementById('cz');
+const sp = document.getElementById('sp');
+const fp = document.getElementById('fp');
+
+let frames = 0, lastFpsAt = performance.now();
+
 function animate() {
-  requestAnimationFrame(animate);        // ask for the next frame
-  const dt = clock.getDelta();           // seconds since the last frame
-  const t  = clock.elapsedTime;          // seconds since the page loaded
+  requestAnimationFrame(animate);
 
-  if (model) {
-    // ---- YOUR CODE ANIMATION ----
-    model.rotation.y += SPIN * dt;                       // spin (SPIN = 0 → still)
-    // model.position.y = Math.sin(t) * 0.3;             // bob up and down
-    // model.rotation.x = Math.sin(t * 2) * 0.2;         // rock back and forth
-    // model.scale.setScalar(baseScale * (1 + Math.sin(t) * 0.05)); // pulse
-    // -----------------------------
+  const dt = clock.getDelta();
+  if (mixer) mixer.update(dt);
+
+  // ease toward the scroll target so the camera glides instead of snapping
+  smoothed = lerp(smoothed, scrollProgress, 0.07);
+
+  const radius = lerp(START.radius, END.radius, smoothed);
+  const height = lerp(START.height, END.height, smoothed);
+  const angle  = lerp(START.angle,  END.angle,  smoothed);
+
+  camera.position.set(
+    Math.sin(angle) * radius,
+    height,
+    Math.cos(angle) * radius
+  );
+  controls.update();
+  camera.lookAt(0, 0, 0);
+
+  renderer.render(scene, camera);
+
+  // HUD
+  cx.textContent = camera.position.x.toFixed(2);
+  cy.textContent = camera.position.y.toFixed(2);
+  cz.textContent = camera.position.z.toFixed(2);
+  sp.textContent = Math.round(scrollProgress * 100) + '%';
+
+  frames++;
+  const now = performance.now();
+  if (now - lastFpsAt > 500) {
+    fp.textContent = Math.round((frames * 1000) / (now - lastFpsAt));
+    frames = 0;
+    lastFpsAt = now;
   }
-
-  controls.update();                     // apply drag momentum
-  renderer.render(scene, camera);        // draw this frame
 }
 animate();
 
-
-/* ============================================================
-   Keep it sharp when the window resizes.
-   ============================================================ */
+/* ------------------------------------------------------------------
+   7. HOUSEKEEPING
+   ------------------------------------------------------------------ */
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+
+// fade the text cards in as they arrive
+const io = new IntersectionObserver(
+  (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('in')),
+  { threshold: 0.35 }
+);
+document.querySelectorAll('.card').forEach(c => io.observe(c));
 </script>
+
 </body>
 </html>
