@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Animate a 3D model with code</title>
+
 <style>
   /* The canvas fills the whole window. That's all the CSS we need. */
   body { margin: 0; background: #D2D6D8; }
   canvas { display: block; }
 </style>
+
 <!-- Tells the browser where to load Three.js from -->
 <script type="importmap">
 {
@@ -19,27 +21,37 @@
 }
 </script>
 </head>
+
 <body>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+
 /* ============================================================
    TWEAK ZONE — change a number, save, reload.
    ============================================================ */
+
 const FOV      = 20;    // camera lens: 20 = zoomed in, 70 = wide angle
 const SIZE     = 2.4;   // how big the model is on screen
 const EXPOSURE = 1.05;  // brightness: 0.6 dark, 1.6 bright
 const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
+
+
 /* ============================================================
    THE 3D WORLD — scene, camera, renderer. Set up once.
    ============================================================ */
+
 // The scene holds everything you can see.
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop (not black)
+
 // The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
 camera.position.set(0, 1, 6);
+
 // The renderer draws the scene onto the page.
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -47,52 +59,80 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = EXPOSURE;
 document.body.appendChild(renderer.domElement);
-// Soft, even studio lighting so the model isn't black.
-// (Add a spotlight later with: scene.add(new THREE.DirectionalLight(0xffffff, 2)); )
+
+// Soft, even studio lighting (reflections + base fill).
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// A direct light from one side, so the model's shape reads clearly.
+// Without it, a pale model blends into a pale background. Move the
+// position to change which direction the light comes from.
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+keyLight.position.set(3, 5, 4);
+scene.add(keyLight);
+
 // Lets you DRAG to rotate the view and SCROLL to zoom.
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;   // adds smooth momentum
+
+
 /* ============================================================
    LOAD THE MODEL — put model.glb next to this file.
    ============================================================ */
-let model = null;   // becomes your model once it finishes loading
+
+let model = null;       // becomes your model once it finishes loading
+let baseScale = 1;      // the model's fitted scale (used by the pulse example)
+
 new GLTFLoader().load('model.glb', (gltf) => {
   model = gltf.scene;
+
   // Auto-center the model and scale it to SIZE.
+  // IMPORTANT: Blender models are often built far from the origin, so we
+  // SCALE first, then offset by the *scaled* center. Doing it the other
+  // way round lets the scaling fling the model off-screen (black screen!).
   const box    = new THREE.Box3().setFromObject(model);
   const length = box.getSize(new THREE.Vector3()).length();
   const centre = box.getCenter(new THREE.Vector3());
-  model.position.sub(centre);
-  model.scale.setScalar(SIZE / length);
+  baseScale = SIZE / length;
+  model.scale.setScalar(baseScale);
+  model.position.copy(centre).multiplyScalar(-baseScale);
+
   scene.add(model);
-});
+}, undefined, (err) => console.error('model.glb failed to load:', err));
+
+
 /* ============================================================
    THE ANIMATION LOOP — runs ~60 times a second.
    THIS is where you animate with code. Write anything here
    that changes the model's position / rotation / scale.
    ============================================================ */
+
 const clock = new THREE.Clock();
+
 function animate() {
   requestAnimationFrame(animate);        // ask for the next frame
   const dt = clock.getDelta();           // seconds since the last frame
   const t  = clock.elapsedTime;          // seconds since the page loaded
+
   if (model) {
     // ---- YOUR CODE ANIMATION ----
-    model.rotation.y += SPIN * dt;                 // spin around
-    // model.position.y = Math.sin(t) * 0.3;       // bob up and down
-    // model.rotation.x = Math.sin(t * 2) * 0.2;   // rock back and forth
-    // model.scale.setScalar((SIZE / 1) * (1 + Math.sin(t) * 0.05)); // pulse
+    model.rotation.y += SPIN * dt;                       // spin around
+    // model.position.y = Math.sin(t) * 0.3;             // bob up and down
+    // model.rotation.x = Math.sin(t * 2) * 0.2;         // rock back and forth
+    // model.scale.setScalar(baseScale * (1 + Math.sin(t) * 0.05)); // pulse
     // -----------------------------
   }
+
   controls.update();                     // apply drag momentum
   renderer.render(scene, camera);        // draw this frame
 }
 animate();
+
+
 /* ============================================================
    Keep it sharp when the window resizes.
    ============================================================ */
+
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
