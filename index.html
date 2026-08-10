@@ -6,9 +6,23 @@
 <title>Animate a 3D model with code</title>
 
 <style>
-  /* The canvas fills the whole window. That's all the CSS we need. */
-  body { margin: 0; background: #D2D6D8; }
+  /* White page. Text sits on top of the 3D canvas. */
+  body { margin: 0; background: #ffffff; color: #16191A; font-family: system-ui, sans-serif; }
   canvas { display: block; }
+
+  /* The 3D canvas fills the window and sits BEHIND the text. */
+  #scene { position: fixed; inset: 0; z-index: 0; }
+
+  /* Your text, layered on top. pointer-events:none lets you still
+     drag/rotate the model through the text. */
+  #text {
+    position: relative; z-index: 1;
+    max-width: 620px;
+    padding: 14vh 30px 40px;
+    pointer-events: none;
+  }
+  #text h1 { font-size: clamp(2.2rem, 7vw, 4.4rem); line-height: 1; margin: 0 0 20px; }
+  #text p  { font-size: 1.05rem; line-height: 1.6; max-width: 46ch; margin: 0 0 16px; }
 </style>
 
 <!-- Tells the browser where to load Three.js from -->
@@ -23,6 +37,20 @@
 </head>
 
 <body>
+
+<!-- The 3D canvas gets injected here -->
+<div id="scene"></div>
+
+<!-- ===========================================================
+     YOUR TEXT — edit anything between the tags.
+     Copy a <p> line to add another paragraph.
+     =========================================================== -->
+<div id="text">
+  <h1>A BOTTLE</h1>
+  <p>This is a bottle that I made in Blender.</p>
+  <p>I will now be swinging this bottle around.</p>
+</div>
+
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -37,7 +65,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 const FOV      = 20;    // camera lens: 20 = zoomed in, 70 = wide angle
 const SIZE     = 2.4;   // how big the model is on screen
 const EXPOSURE = 1.05;  // brightness: 0.6 dark, 1.6 bright
-const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
+const SPIN     = 0.0;   // spin speed in radians/second (0 = no spin)
 
 
 /* ============================================================
@@ -46,7 +74,7 @@ const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
 
 // The scene holds everything you can see.
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop (not black)
+scene.background = new THREE.Color(0xffffff);   // white backdrop
 
 // The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
@@ -58,15 +86,15 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = EXPOSURE;
-document.body.appendChild(renderer.domElement);
+document.getElementById('scene').appendChild(renderer.domElement);
 
 // Soft, even studio lighting (reflections + base fill).
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 // A direct light from one side, so the model's shape reads clearly.
-// Without it, a pale model blends into a pale background. Move the
-// position to change which direction the light comes from.
+// (Especially important now: a white model on a white background needs
+// this shading, or it disappears.) Move the position to change direction.
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
 keyLight.position.set(3, 5, 4);
 scene.add(keyLight);
@@ -116,7 +144,7 @@ function animate() {
 
   if (model) {
     // ---- YOUR CODE ANIMATION ----
-    model.rotation.y += SPIN * dt;                       // spin around
+    model.rotation.y += SPIN * dt;                       // spin (SPIN = 0 → still)
     // model.position.y = Math.sin(t) * 0.3;             // bob up and down
     // model.rotation.x = Math.sin(t * 2) * 0.2;         // rock back and forth
     // model.scale.setScalar(baseScale * (1 + Math.sin(t) * 0.05)); // pulse
