@@ -265,6 +265,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -328,7 +329,17 @@ controls.target.set(0, 0, 0);
 let mixer = null;
 const clock = new THREE.Clock();
 
-new GLTFLoader().load(
+// Your model.glb is Draco-COMPRESSED (exported from Blender with
+// Compression on). A plain GLTFLoader can't decode that, so we attach a
+// DRACOLoader that pulls the decoder from the same CDN. Without this the
+// model silently fails to load and you get a blank scene.
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://unpkg.com/three@0.185.1/examples/jsm/libs/draco/');
+
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
+gltfLoader.load(
   'model.glb',
   (gltf) => {
     const model = gltf.scene;
