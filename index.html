@@ -23,27 +23,11 @@
 </head>
 
 <body>
-
-<!-- TEMP DEBUG STATUS — shows whether the model loaded or errored.
-     Delete this <div> (and the STATUS lines in the script) once it works. -->
-<div id="status" style="position:fixed;top:8px;left:8px;z-index:10;
-     font:14px/1.4 system-ui,sans-serif;color:#16191A;background:#ffffffcc;
-     padding:6px 10px;border-radius:6px;max-width:80vw;white-space:pre-wrap">booting…</div>
-
-<script>
-// STATUS helper + global error trap (part of the temp debug overlay)
-window.__status = (m) => { const el = document.getElementById('status'); if (el) el.textContent = m; };
-addEventListener('error', (e) => window.__status('JS ERROR: ' + (e.message || e.filename)));
-addEventListener('unhandledrejection', (e) => window.__status('PROMISE ERROR: ' + e.reason));
-</script>
-
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-
-window.__status('Three.js loaded ✓  — loading model.glb…');
 
 
 /* ============================================================
@@ -62,7 +46,7 @@ const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
 
 // The scene holds everything you can see.
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop
+scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop (not black)
 
 // The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
@@ -76,13 +60,13 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = EXPOSURE;
 document.body.appendChild(renderer.domElement);
 
-// Soft, even studio lighting so the model isn't black.
+// Soft, even studio lighting (reflections + base fill).
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-// A direct light from one side. This casts brightness and shadow across
-// the model so its shape reads clearly (without it, a pale model blends
-// into a pale background). Move the position to change where light comes from.
+// A direct light from one side, so the model's shape reads clearly.
+// Without it, a pale model blends into a pale background. Move the
+// position to change which direction the light comes from.
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
 keyLight.position.set(3, 5, 4);
 scene.add(keyLight);
@@ -96,29 +80,25 @@ controls.enableDamping = true;   // adds smooth momentum
    LOAD THE MODEL — put model.glb next to this file.
    ============================================================ */
 
-let model = null;   // becomes your model once it finishes loading
+let model = null;       // becomes your model once it finishes loading
+let baseScale = 1;      // the model's fitted scale (used by the pulse example)
 
 new GLTFLoader().load('model.glb', (gltf) => {
   model = gltf.scene;
 
   // Auto-center the model and scale it to SIZE.
-  // Blender models are often built far from the origin, so we must
-  // SCALE first, then offset by the *scaled* center — otherwise the
-  // scaling throws the model back off-screen.
+  // IMPORTANT: Blender models are often built far from the origin, so we
+  // SCALE first, then offset by the *scaled* center. Doing it the other
+  // way round lets the scaling fling the model off-screen (black screen!).
   const box    = new THREE.Box3().setFromObject(model);
   const length = box.getSize(new THREE.Vector3()).length();
   const centre = box.getCenter(new THREE.Vector3());
-  const scale  = SIZE / length;
-  model.scale.setScalar(scale);
-  model.position.copy(centre).multiplyScalar(-scale);
+  baseScale = SIZE / length;
+  model.scale.setScalar(baseScale);
+  model.position.copy(centre).multiplyScalar(-baseScale);
 
   scene.add(model);
-  window.__status('model loaded ✓  (meshes: ' + (gltf.scene.children.length) +
-                  ', animations: ' + gltf.animations.length + ')');
-}, undefined, (err) => {
-  window.__status('model.glb FAILED to load: ' + err);
-  console.error(err);
-});
+}, undefined, (err) => console.error('model.glb failed to load:', err));
 
 
 /* ============================================================
@@ -136,10 +116,10 @@ function animate() {
 
   if (model) {
     // ---- YOUR CODE ANIMATION ----
-    model.rotation.y += SPIN * dt;                 // spin around
-    // model.position.y = Math.sin(t) * 0.3;       // bob up and down
-    // model.rotation.x = Math.sin(t * 2) * 0.2;   // rock back and forth
-    // model.scale.setScalar((SIZE / 1) * (1 + Math.sin(t) * 0.05)); // pulse
+    model.rotation.y += SPIN * dt;                       // spin around
+    // model.position.y = Math.sin(t) * 0.3;             // bob up and down
+    // model.rotation.x = Math.sin(t * 2) * 0.2;         // rock back and forth
+    // model.scale.setScalar(baseScale * (1 + Math.sin(t) * 0.05)); // pulse
     // -----------------------------
   }
 
