@@ -3,27 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3D on the web</title>
-
+<title>Animate a 3D model with code</title>
 <style>
-  body { margin: 0; background: #D2D6D8; color: #16191A; font-family: system-ui, sans-serif; }
+  /* The canvas fills the whole window. That's all the CSS we need. */
+  body { margin: 0; background: #D2D6D8; }
   canvas { display: block; }
-
-  /* The 3D canvas sits behind everything */
-  #scene { position: fixed; inset: 0; z-index: 0; }
-
-  /* Text overlay on top of the 3D scene */
-  #text {
-    position: relative; z-index: 1;
-    max-width: 620px;
-    padding: 14vh 30px 300vh;
-    pointer-events: none;
-  }
-  #text h1 { font-size: clamp(2.2rem, 7vw, 4.4rem); line-height: 1; margin: 0 0 20px; }
-  #text p  { font-size: 1.05rem; line-height: 1.6; max-width: 46ch; margin: 0 0 16px; }
 </style>
-
-<!-- Import map tells the browser where to find Three.js modules -->
+<!-- Tells the browser where to load Three.js from -->
 <script type="importmap">
 {
   "imports": {
@@ -33,229 +19,85 @@
 }
 </script>
 </head>
-
 <body>
-
-<!-- The 3D canvas will be injected here -->
-<div id="scene"></div>
-
-<!-- Your text content — edit this freely -->
-<div id="text">
-  <h1>MY 3D BOTTLE</h1>
-  <p>this is a bottle</p>
-  <p>the bottle will now move</p>
-</div>
-
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-
-
-/* =============================================================
-   TWEAK ZONE — Change these numbers, save, and reload the page.
-   Each value has a comment explaining what it does.
-   ============================================================= */
-
-const FOV = 70;
-// Field of view in degrees.
-//   20 = telephoto (zoomed in, flattering for models)
-//   70 = wide angle (sees more, distorted edges)
-
-const SIZE = 2.05;
-// How big the model appears on screen.
-//   1.0 = small, 5.0 = large
-//   Adjust until your model fills the viewport nicely.
-
-const EXPOSURE = 1.05;
-// Brightness of the scene.
-//   0.6 = darker, moody
-//   1.0 = neutral
-//   1.6 = bright, washed out
-
-// CAMERA POSITIONS
-// The camera starts at START when the page is at the top,
-// and moves to END as you scroll down.
-//
-//   radius = distance from the model (bigger = further away)
-//   height = vertical position (0 = level, positive = above, negative = below)
-//   angle  = horizontal angle in radians (0 = front, 3.14 = back, 6.28 = full circle)
-
-const START = { radius: 5.0, height: 1.0, angle: 0.0 };
-// Camera at the top of the page (before scrolling)
-
-const END = { radius: 3.2, height: 0.1, angle: Math.PI * 0.85 };
-// Camera at the bottom of the page (after scrolling)
-
-const SCROLL_EASE = 0.07;
-// How smoothly the camera follows the scroll.
-//   0.02 = very floaty, lags behind
-//   0.1  = smooth, pleasant
-//   0.3  = snappy, instant
-
-const SPIN = 0.4;
-// Constant rotation speed in radians per second.
-//   0.0  = no spin
-//   0.4  = gentle rotation
-//   1.5  = fast spin
-
-
-/* =============================================================
-   SCENE SETUP — You can customize colors, lights, and renderer.
-   ============================================================= */
-
-// Create the scene — this is the 3D world that holds everything
+/* ============================================================
+   TWEAK ZONE — change a number, save, reload.
+   ============================================================ */
+const FOV      = 20;    // camera lens: 20 = zoomed in, 70 = wide angle
+const SIZE     = 2.4;   // how big the model is on screen
+const EXPOSURE = 1.05;  // brightness: 0.6 dark, 1.6 bright
+const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
+/* ============================================================
+   THE 3D WORLD — scene, camera, renderer. Set up once.
+   ============================================================ */
+// The scene holds everything you can see.
 const scene = new THREE.Scene();
-
-// To change background color: scene.background = new THREE.Color('#D2D6D8');
-
-// Create the camera — this is the "eye" that looks at the scene
+// The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
-
-// Create the renderer — this draws the scene onto the canvas
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+camera.position.set(0, 1, 6);
+// The renderer draws the scene onto the page.
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = EXPOSURE;
-document.getElementById('scene').appendChild(renderer.domElement);
-
-// Environment lighting — this gives realistic reflections and soft light
-// RoomEnvironment creates a neutral studio-like lighting setup
+document.body.appendChild(renderer.domElement);
+// Soft, even studio lighting so the model isn't black.
+// (Add a spotlight later with: scene.add(new THREE.DirectionalLight(0xffffff, 2)); )
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-// Key light — the main directional light
-// Change color: new THREE.DirectionalLight(0xff0000, 1.4) for red
-// Change intensity: 1.4 = bright, 0.5 = dim
-const key = new THREE.DirectionalLight(0xffffff, 1.4);
-key.position.set(3, 5, 4); // x, y, z position of the light
-scene.add(key);
-
-// OrbitControls — lets you drag to rotate, scroll to zoom (when enabled)
+// Lets you DRAG to rotate the view and SCROLL to zoom.
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;    // Smooth momentum after releasing mouse
-controls.dampingFactor = 0.06;    // How quickly momentum fades
-controls.enablePan = false;       // Disable panning (dragging to move)
-controls.enableZoom = false;      // Disable zoom (we control camera via scroll)
-controls.target.set(0, 0, 0);     // The point the camera orbits around
-
-
-/* =============================================================
-   MODEL LOADING — Replace 'model.glb' with your file path.
-   ============================================================= */
-
-let mixer = null;      // Animation mixer (plays Blender animations)
-let spinTarget = null; // The object that gets constant rotation
+controls.enableDamping = true;   // adds smooth momentum
+/* ============================================================
+   LOAD THE MODEL — put model.glb next to this file.
+   ============================================================ */
+let model = null;   // becomes your model once it finishes loading
+new GLTFLoader().load('model.glb', (gltf) => {
+  model = gltf.scene;
+  // Auto-center the model and scale it to SIZE.
+  const box    = new THREE.Box3().setFromObject(model);
+  const length = box.getSize(new THREE.Vector3()).length();
+  const centre = box.getCenter(new THREE.Vector3());
+  model.position.sub(centre);
+  model.scale.setScalar(SIZE / length);
+  scene.add(model);
+});
+/* ============================================================
+   THE ANIMATION LOOP — runs ~60 times a second.
+   THIS is where you animate with code. Write anything here
+   that changes the model's position / rotation / scale.
+   ============================================================ */
 const clock = new THREE.Clock();
-
-// Load the .glb file
-// To use your own model:
-//   1. Export from Blender as .glb (File > Export > glTF 2.0)
-//   2. Place the file in the same folder as this HTML
-//   3. Change 'model.glb' to your filename below
-new GLTFLoader().load(
-  'model.glb',
-
-  // On load success
-  (gltf) => {
-    const model = gltf.scene;
-
-    // Auto-center and scale the model to fit the screen
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3()).length();
-    const centre = box.getCenter(new THREE.Vector3());
-
-    model.position.sub(centre);          // Move model to center of scene
-    model.scale.setScalar(SIZE / size);  // Scale to desired size
-
-    scene.add(model);
-    spinTarget = model;
-
-    // Play Blender animations if they exist
-    // In Blender: keyframe your animations, then export as .glb
-    if (gltf.animations.length) {
-      mixer = new THREE.AnimationMixer(model);
-      mixer.clipAction(gltf.animations[0]).play();
-      console.log('animation clips:', gltf.animations.map(a => a.name));
-    }
-  },
-
-  // On progress (optional)
-  undefined,
-
-  // On error
-  (err) => console.error('model.glb failed to load:', err)
-);
-
-
-/* =============================================================
-   SCROLL HANDLING — This makes the camera move as you scroll.
-   ============================================================= */
-
-let scrollProgress = 0;  // 0 = top of page, 1 = bottom of page
-let smoothed = 0;        // Smoothed version (lerps toward scrollProgress)
-
-function readScroll() {
-  const max = document.body.scrollHeight - innerHeight;
-  scrollProgress = max > 0 ? Math.min(scrollY / max, 1) : 0;
-}
-addEventListener('scroll', readScroll, { passive: true });
-readScroll();
-
-// Linear interpolation — blends between two values based on t (0 to 1)
-const lerp = (a, b, t) => a + (b - a) * t;
-
-
-/* =============================================================
-   ANIMATION LOOP — This runs every frame (60 times per second).
-   ============================================================= */
-
 function animate() {
-  requestAnimationFrame(animate); // Schedule next frame
-
-  const dt = clock.getDelta(); // Time since last frame (in seconds)
-
-  // Update Blender animations if they exist
-  if (mixer) mixer.update(dt);
-
-  // Apply constant spin rotation
-  if (spinTarget) spinTarget.rotation.y += SPIN * dt;
-
-  // Smooth the scroll value so the camera doesn't jerk
-  smoothed = lerp(smoothed, scrollProgress, SCROLL_EASE);
-
-  // Calculate camera position based on scroll progress
-  const radius = lerp(START.radius, END.radius, smoothed);
-  const height = lerp(START.height, END.height, smoothed);
-  const angle  = lerp(START.angle,  END.angle,  smoothed);
-
-  // Convert spherical coordinates to Cartesian (x, y, z)
-  camera.position.set(
-    Math.sin(angle) * radius,  // x position (left/right)
-    height,                     // y position (up/down)
-    Math.cos(angle) * radius   // z position (forward/back)
-  );
-
-  controls.update();          // Apply damping to controls
-  camera.lookAt(0, 0, 0);    // Always look at the center
-
-  renderer.render(scene, camera); // Draw the scene
+  requestAnimationFrame(animate);        // ask for the next frame
+  const dt = clock.getDelta();           // seconds since the last frame
+  const t  = clock.elapsedTime;          // seconds since the page loaded
+  if (model) {
+    // ---- YOUR CODE ANIMATION ----
+    model.rotation.y += SPIN * dt;                 // spin around
+    // model.position.y = Math.sin(t) * 0.3;       // bob up and down
+    // model.rotation.x = Math.sin(t * 2) * 0.2;   // rock back and forth
+    // model.scale.setScalar((SIZE / 1) * (1 + Math.sin(t) * 0.05)); // pulse
+    // -----------------------------
+  }
+  controls.update();                     // apply drag momentum
+  renderer.render(scene, camera);        // draw this frame
 }
 animate();
-
-
-/* =============================================================
-   WINDOW RESIZE — Keeps everything looking right when resized.
-   ============================================================= */
-
+/* ============================================================
+   Keep it sharp when the window resizes.
+   ============================================================ */
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 </script>
-
 </body>
 </html>
