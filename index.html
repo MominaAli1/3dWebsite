@@ -23,11 +23,27 @@
 </head>
 
 <body>
+
+<!-- TEMP DEBUG STATUS — shows whether the model loaded or errored.
+     Delete this <div> (and the STATUS lines in the script) once it works. -->
+<div id="status" style="position:fixed;top:8px;left:8px;z-index:10;
+     font:14px/1.4 system-ui,sans-serif;color:#16191A;background:#ffffffcc;
+     padding:6px 10px;border-radius:6px;max-width:80vw;white-space:pre-wrap">booting…</div>
+
+<script>
+// STATUS helper + global error trap (part of the temp debug overlay)
+window.__status = (m) => { const el = document.getElementById('status'); if (el) el.textContent = m; };
+addEventListener('error', (e) => window.__status('JS ERROR: ' + (e.message || e.filename)));
+addEventListener('unhandledrejection', (e) => window.__status('PROMISE ERROR: ' + e.reason));
+</script>
+
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+window.__status('Three.js loaded ✓  — loading model.glb…');
 
 
 /* ============================================================
@@ -97,6 +113,11 @@ new GLTFLoader().load('model.glb', (gltf) => {
   model.position.copy(centre).multiplyScalar(-scale);
 
   scene.add(model);
+  window.__status('model loaded ✓  (meshes: ' + (gltf.scene.children.length) +
+                  ', animations: ' + gltf.animations.length + ')');
+}, undefined, (err) => {
+  window.__status('model.glb FAILED to load: ' + err);
+  console.error(err);
 });
 
 
