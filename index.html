@@ -3,15 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Animate a 3D model with code</title>
+<title>Bottle</title>
 
 <style>
-  /* The canvas fills the whole window. That's all the CSS we need. */
-  body { margin: 0; background: #D2D6D8; }
+  body { margin: 0; background: #ffffff; color: #16191A;
+         font-family: system-ui, -apple-system, sans-serif; }
   canvas { display: block; }
+
+  /* The 3D canvas sits behind the text and never intercepts clicks */
+  #scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  /* Text column on the left. The tall bottom padding is what creates
+     the scroll distance the bottle animates across. */
+  #text { position: relative; z-index: 1; max-width: 520px;
+          padding: 16vh 8vw 220vh; }
+  #text h1 { font-size: clamp(2rem, 6vw, 3.6rem); line-height: 1.05; margin: 0 0 24px; }
+  #text p  { font-size: 1.05rem; line-height: 1.65; max-width: 42ch; margin: 0 0 18px; }
 </style>
 
-<!-- Tells the browser where to load Three.js from -->
 <script type="importmap">
 {
   "imports": {
@@ -23,121 +32,162 @@
 </head>
 
 <body>
+
+<div id="scene"></div>
+
+<div id="text">
+  <h1>My 3D bottle</h1>
+  <p>Write whatever you want here.</p>
+  <p>Scroll down and the bottle drifts across to the left.</p>
+</div>
+
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 
 /* ============================================================
-   TWEAK ZONE — change a number, save, reload.
+   TWEAK ZONE
    ============================================================ */
 
-const FOV      = 20;    // camera lens: 20 = zoomed in, 70 = wide angle
-const SIZE     = 2.4;   // how big the model is on screen
-const EXPOSURE = 1.05;  // brightness: 0.6 dark, 1.6 bright
-const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
+const FOV      = 35;    // 20 = telephoto, 70 = wide
+const SIZE     = 2.4;   // how big the bottle sits on screen
+const EXPOSURE = 1.05;  // 0.6 dark, 1.6 bright
+
+const FACING   = 0;     // turn the bottle so the label faces you (radians)
+const HEIGHT   = 0;     // raise or lower the bottle
+
+// Where the bottle sits across the screen, as a fraction of the visible
+// half-width. 1 = hard against the edge, 0 = dead centre.
+const START_X  = 0.55;  // top of the page: right side
+const END_X    = -0.45; // bottom of the page: left side
+
+const SCROLL_EASE = 0.08;  // 0.02 floaty, 0.3 snappy
 
 
 /* ============================================================
-   THE 3D WORLD — scene, camera, renderer. Set up once.
+   THE 3D WORLD
    ============================================================ */
 
-// The scene holds everything you can see.
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop (not black)
+// No scene.background, so the white page shows through the canvas.
 
-// The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 1, 6);
+camera.position.set(0, 0.5, 6);
+camera.lookAt(0, 0, 0);
 
-// The renderer draws the scene onto the page.
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = EXPOSURE;
-document.body.appendChild(renderer.domElement);
+document.getElementById('scene').appendChild(renderer.domElement);
 
-// Soft, even studio lighting (reflections + base fill).
+// Studio environment for reflections and base fill
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-// A direct light from one side, so the model's shape reads clearly.
-// Without it, a pale model blends into a pale background. Move the
-// position to change which direction the light comes from.
+// Key light from one side so the silhouette reads against white
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
 keyLight.position.set(3, 5, 4);
 scene.add(keyLight);
 
-// Lets you DRAG to rotate the view and SCROLL to zoom.
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;   // adds smooth momentum
+// The rig carries the bottle. Scroll moves the rig, never the model,
+// so the centring offset and the movement stay in separate objects.
+const rig = new THREE.Group();
+rig.rotation.y = FACING;
+rig.position.y = HEIGHT;
+scene.add(rig);
 
 
 /* ============================================================
-   LOAD THE MODEL — put model.glb next to this file.
+   LOAD THE MODEL - model.glb goes next to this file
    ============================================================ */
 
-let model = null;       // becomes your model once it finishes loading
-let baseScale = 1;      // the model's fitted scale (used by the pulse example)
+let loaded     = false;
+let modelHalfW = 0;   // half the bottle's width, used to keep it in frame
+let leftX = 0, rightX = 0;
 
 new GLTFLoader().load('model.glb', (gltf) => {
-  model = gltf.scene;
+  const model = gltf.scene;
 
-  // Auto-center the model and scale it to SIZE.
-  // IMPORTANT: Blender models are often built far from the origin, so we
-  // SCALE first, then offset by the *scaled* center. Doing it the other
-  // way round lets the scaling fling the model off-screen (black screen!).
+  // Scale first, then offset by the scaled centre
   const box    = new THREE.Box3().setFromObject(model);
   const length = box.getSize(new THREE.Vector3()).length();
   const centre = box.getCenter(new THREE.Vector3());
-  baseScale = SIZE / length;
-  model.scale.setScalar(baseScale);
-  model.position.copy(centre).multiplyScalar(-baseScale);
+  const s      = SIZE / length;
 
-  scene.add(model);
+  model.scale.setScalar(s);
+  model.position.copy(centre).multiplyScalar(-s);
+
+  modelHalfW = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).x / 2;
+
+  rig.add(model);
+  loaded = true;
+  layout();
 }, undefined, (err) => console.error('model.glb failed to load:', err));
 
 
 /* ============================================================
-   THE ANIMATION LOOP — runs ~60 times a second.
-   THIS is where you animate with code. Write anything here
-   that changes the model's position / rotation / scale.
+   LAYOUT - works out how far the bottle can travel without
+   any part of it leaving the screen. Reruns on resize.
    ============================================================ */
 
-const clock = new THREE.Clock();
+function layout() {
+  const halfH = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * camera.position.length();
+  const halfW = halfH * camera.aspect;
 
-function animate() {
-  requestAnimationFrame(animate);        // ask for the next frame
-  const dt = clock.getDelta();           // seconds since the last frame
-  const t  = clock.elapsedTime;          // seconds since the page loaded
+  // Furthest the centre can sit before an edge clips
+  const maxShift = Math.max(0, halfW - modelHalfW - 0.15);
 
-  if (model) {
-    // ---- YOUR CODE ANIMATION ----
-    model.rotation.y += SPIN * dt;                       // spin around
-    // model.position.y = Math.sin(t) * 0.3;             // bob up and down
-    // model.rotation.x = Math.sin(t * 2) * 0.2;         // rock back and forth
-    // model.scale.setScalar(baseScale * (1 + Math.sin(t) * 0.05)); // pulse
-    // -----------------------------
-  }
-
-  controls.update();                     // apply drag momentum
-  renderer.render(scene, camera);        // draw this frame
+  rightX = Math.min(halfW * START_X, maxShift);
+  leftX  = Math.max(halfW * END_X, -maxShift);
 }
-animate();
 
 
 /* ============================================================
-   Keep it sharp when the window resizes.
+   SCROLL
    ============================================================ */
+
+let progress = 0;   // 0 at the top of the page, 1 at the bottom
+let smoothed = 0;
+
+function readScroll() {
+  const max = document.body.scrollHeight - innerHeight;
+  progress = max > 0 ? Math.min(scrollY / max, 1) : 0;
+}
+addEventListener('scroll', readScroll, { passive: true });
+readScroll();
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+
+/* ============================================================
+   ANIMATION LOOP
+   ============================================================ */
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  smoothed = lerp(smoothed, progress, SCROLL_EASE);
+
+  if (loaded) {
+    rig.position.x = lerp(rightX, leftX, smoothed);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  layout();
 });
 </script>
+
 </body>
 </html>
