@@ -46,6 +46,7 @@ const SPIN     = 0.5;   // spin speed in radians/second (0 = no spin)
 
 // The scene holds everything you can see.
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xD2D6D8);   // light-gray backdrop
 
 // The camera is your eye. Here we place it a bit up and back.
 const camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, 0.1, 100);
@@ -60,9 +61,15 @@ renderer.toneMappingExposure = EXPOSURE;
 document.body.appendChild(renderer.domElement);
 
 // Soft, even studio lighting so the model isn't black.
-// (Add a spotlight later with: scene.add(new THREE.DirectionalLight(0xffffff, 2)); )
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// A direct light from one side. This casts brightness and shadow across
+// the model so its shape reads clearly (without it, a pale model blends
+// into a pale background). Move the position to change where light comes from.
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+keyLight.position.set(3, 5, 4);
+scene.add(keyLight);
 
 // Lets you DRAG to rotate the view and SCROLL to zoom.
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -79,11 +86,15 @@ new GLTFLoader().load('model.glb', (gltf) => {
   model = gltf.scene;
 
   // Auto-center the model and scale it to SIZE.
+  // Blender models are often built far from the origin, so we must
+  // SCALE first, then offset by the *scaled* center — otherwise the
+  // scaling throws the model back off-screen.
   const box    = new THREE.Box3().setFromObject(model);
   const length = box.getSize(new THREE.Vector3()).length();
   const centre = box.getCenter(new THREE.Vector3());
-  model.position.sub(centre);
-  model.scale.setScalar(SIZE / length);
+  const scale  = SIZE / length;
+  model.scale.setScalar(scale);
+  model.position.copy(centre).multiplyScalar(-scale);
 
   scene.add(model);
 });
