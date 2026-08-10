@@ -146,8 +146,8 @@ controls.target.set(0, 0, 0);     // The point the camera orbits around
    MODEL LOADING — Replace 'model.glb' with your file path.
    ============================================================= */
 
-let mixer = null;      // Animation mixer (plays Blender animations)
-let spinTarget = null; // The object that gets constant rotation
+let mixer = null;      // Animation mixer (plays your Blender animation)
+let spinTarget = null; // The WRAPPER group that YOUR code moves/spins
 const clock = new THREE.Clock();
 
 // Load the .glb file
@@ -162,19 +162,54 @@ new GLTFLoader().load(
   (gltf) => {
     const model = gltf.scene;
 
-    // Auto-center and scale the model to fit the screen
+    // Measure the model so we can center and scale it.
+    // NOTE: this is measured from the model's pose at load time (frame 0),
+    // so the centering is based on where the bottle sits on the first frame.
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3()).length();
     const centre = box.getCenter(new THREE.Vector3());
 
-    model.position.sub(centre);          // Move model to center of scene
-    model.scale.setScalar(SIZE / size);  // Scale to desired size
+    /* -----------------------------------------------------------------
+       THE WRAPPER TRICK — why there are two groups around the model.
 
-    scene.add(model);
-    spinTarget = model;
+       The mixer re-applies your Blender keyframes to the MODEL every
+       frame, so anything YOU write onto the model gets overwritten.
+       The fix: nest the model so you and the mixer touch different things.
 
-    // Play Blender animations if they exist
-    // In Blender: keyframe your animations, then export as .glb
+         wrapper   <- YOUR code moves this (spin, scroll, interactions)
+           pivot   <- a fixed offset that centers the model at (0,0,0)
+             model <- the MIXER plays your Blender animation on this
+
+       The mixer can only overwrite the model's own transform. It can't
+       reach the parent groups, so your motion on `wrapper` always sticks.
+       ----------------------------------------------------------------- */
+    const wrapper = new THREE.Group();   // you control this
+    const pivot   = new THREE.Group();   // centering only, never animated
+
+    pivot.position.sub(centre);           // slide model so its center = origin
+    wrapper.scale.setScalar(SIZE / size); // scale the whole thing to fit
+
+    pivot.add(model);
+    wrapper.add(pivot);
+    scene.add(wrapper);
+
+    spinTarget = wrapper;   // SPIN and any motion you add acts on the wrapper
+
+    /* -----------------------------------------------------------------
+       ONLY WANT THE BLENDER ANIMATION, nothing of your own?
+       Then you don't need the wrapper at all. Delete the whole block
+       above (from `const wrapper` down to `spinTarget = wrapper;`) and
+       replace it with these three lines:
+
+           model.position.sub(centre);
+           model.scale.setScalar(SIZE / size);
+           scene.add(model);
+
+       Also delete the SPIN constant up top and the one SPIN line in the
+       animation loop. The mixer block below stays either way.
+       ----------------------------------------------------------------- */
+
+    // Play the single Blender animation (clip #0).
     if (gltf.animations.length) {
       mixer = new THREE.AnimationMixer(model);
       mixer.clipAction(gltf.animations[0]).play();
