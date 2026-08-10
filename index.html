@@ -339,8 +339,11 @@ new GLTFLoader().load(
     const size = box.getSize(new THREE.Vector3()).length();
     const centre = box.getCenter(new THREE.Vector3());
 
-    model.position.sub(centre);                 // move its centre to origin
-    model.scale.setScalar(2.4 / size);          // normalise overall size
+    // Scale FIRST, then offset by the *scaled* centre. Your model is built
+    // off-origin in Blender; centring before scaling flings it off-screen.
+    const fit = 2.4 / size;
+    model.scale.setScalar(fit);                         // normalise overall size
+    model.position.copy(centre).multiplyScalar(-fit);   // move its centre to origin
 
     scene.add(model);
 
