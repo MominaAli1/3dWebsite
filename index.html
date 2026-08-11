@@ -9,16 +9,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-<style>
-  :root {
-    --sweep:  #D2D6D8;
-    --floor:  #AEB5B8;
-    --ink:    #16191A;
-    --muted:  #6B7477;
-    --axis:   #2B57F5;
-    --hairline: rgba(22,25,26,0.14);
-  }
+<style>:root {
+  --sweep:  #EFE0C0;   /* cream, top */
+  --floor:  #D9BE8A;   /* tan, bottom */
+  --ink:    #3A1E10;   /* dark chocolate, text */
+  --muted:  #8A6A4A;   /* light brown, small text */
+  --axis:   #7B3F1D;   /* caramel, the accent word */
+  --hairline: rgba(58,30,16,0.16);
+}
 
+body { background: var(--sweep); }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
 
@@ -38,7 +38,7 @@
   /* the backdrop gradient, behind the canvas */
   #sweep {
     position: fixed; inset: 0; z-index: -1;
-    background: linear-gradient(180deg, var(--sweep) 0%, var(--sweep) 55%, var(--floor) 100%);
+    : linear-gradient(180deg, var(--sweep) 0%, var(--sweep) 55%, var(--floor) 100%);
   }
 
   .page { position: relative; z-index: 2; }
@@ -95,7 +95,7 @@
 
   .card {
     max-width: 46ch;
-    background: rgba(255,255,255,0.55);
+    background: rgba(250,240,220,0.6);
     backdrop-filter: blur(10px);
     border: 1px solid var(--hairline);
     padding: 34px 32px;
