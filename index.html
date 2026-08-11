@@ -152,7 +152,7 @@
   <!-- Put your own name in the h1. The word inside <em> turns blue. -->
   <div class="hero">
     <div class="eyebrow">glTF binary</div>
-    <h1>MI</em> DONOT(Chocolate)</em></h1>
+    <h1>MI</em> DONUT(Chocolate)</em></h1>
   </div>
 
   <!-- Three blocks. Write whatever you want in them.
@@ -192,7 +192,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 
 /* ==================================================================
-   EDIT THESE NUMBERS. This is the whole exercise.
+   EDIT THESE NUMBERS
    ================================================================== */
 
 const SETTINGS = {
@@ -202,7 +202,7 @@ const SETTINGS = {
   lens:      38,         // low = zoomed in and flat, high = wide and distorted
   brightness: 1.0,      // overall exposure
 
-  spin:      0,       // how fast it turns on its own. 0 = still
+  spin:      0,       // how fast it turns on its own. 0 = still. clockwise or anti-clockwise(usually -ve)
   drift:     0.07,       // how lazily the camera follows your scroll. lower = lazier
 
   // where the camera sits at the TOP of the page
@@ -269,14 +269,6 @@ loader.load('model.glb', (gltf) => {
 
   model.rotation.z = 0.10;
   pivot.add(model);
-
-  // Play any animation that was keyframed in Blender
-  if (gltf.animations.length) {
-    mixer = new THREE.AnimationMixer(model);
-    mixer.clipAction(gltf.animations[0]).play();
-  }
-}, undefined, (err) => console.error('model.glb failed to load:', err));
-
 
 /* --- DRAG TO SPIN ---
    Your mouse turns the model. Let go and it keeps rolling, then slows. */
