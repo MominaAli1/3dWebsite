@@ -269,6 +269,7 @@ loader.load('model.glb', (gltf) => {
 
   model.rotation.z = 0.10;
   pivot.add(model);
+  }, undefined, (err) => console.error('model.glb failed to load:', err));
 
 /* --- DRAG TO SPIN ---
    Your mouse turns the model. Let go and it keeps rolling, then slows. */
