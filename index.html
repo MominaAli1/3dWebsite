@@ -206,10 +206,10 @@ const SETTINGS = {
   drift:     0.07,       // how lazily the camera follows your scroll. lower = lazier
 
   // where the camera sits at the TOP of the page
-  start: { distance: 4.7, height: 1.2, angle: -40 },
+  start: { distance: 4.7, height: 1.2, angle: -20 },
 
   // where it ends up at the BOTTOM of the page
-  end:   { distance: 3.2, height: 0.1, angle: 320 }   // angle in degrees
+  end:   { distance: 3.2, height: 0.2, angle: 320 }   // angle in degrees
 
 };
 
@@ -267,7 +267,7 @@ loader.load('model.glb', (gltf) => {
   model.position.sub(box.getCenter(new THREE.Vector3()));
   model.scale.setScalar(SETTINGS.modelSize / size);
 
-  model.rotation.z = 0.20;
+  model.rotation.z = 0.10;
   pivot.add(model);
 
   // Play any animation that was keyframed in Blender
