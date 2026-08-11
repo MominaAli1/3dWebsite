@@ -267,7 +267,7 @@ loader.load('model.glb', (gltf) => {
   model.position.sub(box.getCenter(new THREE.Vector3()));
   model.scale.setScalar(SETTINGS.modelSize / size);
 
-  model.rotation.z = -0.35;
+  model.rotation.y = -0.20;
   pivot.add(model);
 
   // Play any animation that was keyframed in Blender
