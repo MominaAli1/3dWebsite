@@ -58,7 +58,7 @@ body { background: var(--sweep); }
   .readout { display: flex; gap: 14px; }
   .readout output {
     color: var(--ink); font-weight: 600;
-    font-variant-numeric: tabular-nums;   /* stops the digits jittering */
+    font-variant-numeric: tabular-nums;   
     margin-left: 4px;
   }
 
@@ -136,7 +136,8 @@ body { background: var(--sweep); }
 
 <div id="sweep"></div>
 <div id="scene"></div>
-
+  
+ 
 <header>
   <div><b>MY CHOCO DONUT</b> / viewport</div>
   <div class="hint">drag to spin &nbsp;·&nbsp; scroll to move the camera</div>
@@ -149,14 +150,14 @@ body { background: var(--sweep); }
 
 <div class="page">
 
-  <!-- Put your own name in the h1. Wrap a word in <em> to turn it blue. -->
+  <!-- write your own heading  . -->
   <div class="hero">
     <div class="eyebrow">glTF binary</div>
     <h1>MI DONUT</em>(Chocolat)</h1>
   </div>
 
   <!-- Three blocks. Write whatever you want in them.
-       The page needs to be tall enough to scroll, so keep all three. -->
+       just added to keep the page long enough to scroll -->
 
   <section class="block">
     <div class="card">
@@ -206,7 +207,7 @@ const SETTINGS = {
                          // 0.15 is a slow gentle turn, 1.0 is fast
                          // minus sign flips the direction: -0.15
 
-  drift:     0.07,       // how lazily the camera follows your scroll
+  drift:     0.09,       // how lazily the camera follows your scroll
                          // 1 = snaps instantly to your scroll, no lag
                          // 0.07 = glides and settles
                          // 0.02 = very floaty, keeps drifting after you stop
@@ -228,8 +229,6 @@ const SETTINGS = {
 };
 
 /* ================================================================== */
-
-
 /* --- scene, camera, renderer --- */
 
 const scene = new THREE.Scene();
@@ -264,7 +263,7 @@ const pivot = new THREE.Group();
 scene.add(pivot);//add an empty box
 
 const clock = new THREE.Clock();
-const loader = new GLTFLoader();    // handles compressed models from Sketchfab
+const loader = new GLTFLoader();   
 
 loader.load('model.glb', (gltf) => {
   const model = gltf.scene;
@@ -291,7 +290,7 @@ loader.load('model.glb', (gltf) => {
 
 
 /* --- DRAG TO SPIN ---
-   Your mouse turns the model. Let go and it keeps rolling, then slows. */
+   Your mouse turns the model. */
 
 let dragging = false, lastX = 0, turn = 0, speed = 0;
 const canvas = renderer.domElement;
@@ -379,7 +378,7 @@ function animate() {
   camera.lookAt(0, 0, 0);
 
 
-  renderer.render(scene, camera);   // draws the frame. nothing appears without this
+  renderer.render(scene, camera);   // draws the frame
 
 
   // show where the camera actually is, rounded to 2 decimals
