@@ -224,14 +224,13 @@ const SETTINGS = {
   //           0 is the front, 90 is the right side, 180 is behind,
   //           270 is the left. the gap between start and end is how
   //           far it travels: -20 to 320 is almost a full lap.
-  //           want a small move instead? try -20 to 60.
 
 };
 
 /* ================================================================== */
 
 
-/* --- scene, camera, renderer: every three.js project needs these --- */
+/* --- scene, camera, renderer --- */
 
 const scene = new THREE.Scene();
 
@@ -246,16 +245,15 @@ document.getElementById('scene').appendChild(renderer.domElement);
 
 
 /* --- LIGHT ---
-   A .glb file carries no lights at all. Nothing is visible until you
-   light it here. RoomEnvironment is a fake studio built in code.      */
+   A .glb file carries no lights at all. RoomEnvironment is a fake studio in three.js.      */
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const key = new THREE.DirectionalLight(0xffffff, 1.4);
-key.position.set(3, 5, 4);          // right, above, in front. move these to
-                                    // change where the shadow side falls
-scene.add(key);                     // nothing happens until you add it
+key.position.set(3, 5, 4);    //xyz
+                                   
+scene.add(key);                // add it
 
 
 /* --- LOAD THE MODEL ---
@@ -263,7 +261,7 @@ scene.add(key);                     // nothing happens until you add it
    spin is applied to the handle rather than the donut itself.         */
 
 const pivot = new THREE.Group();
-scene.add(pivot);
+scene.add(pivot);//add an empty box
 
 const clock = new THREE.Clock();
 
