@@ -200,7 +200,7 @@ const SETTINGS = {
 
   modelSize: 2.7,        // bigger number = bigger model
 
-  lens:      80,         // low = zoomed in and flat, high = wide and distorted
+  lens:      34,         // low = zoomed in and flat, high = wide and distorted
   brightness: 0.8,       // overall exposure
 
   spin:      0,          // how fast it turns on its own. 0 = still
@@ -268,7 +268,7 @@ const loader = new GLTFLoader();
 loader.load('model.glb', (gltf) => {
   const model = gltf.scene;
 
-  // Centre it and give it a predictable size, whatever units it was made in
+  // Centre it and give it a predictable size
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3()).length();
   model.position.sub(box.getCenter(new THREE.Vector3()));
@@ -284,7 +284,7 @@ loader.load('model.glb', (gltf) => {
   model.position.x += 0.7;       // uncomment to shift it right
   // model.position.y += 0.3;       // uncomment to lift it up
 
-  pivot.add(model);
+  pivot.add(model);//then placed inside the pivot
 
 }, undefined, (err) => console.error('model.glb failed to load:', err));
 
