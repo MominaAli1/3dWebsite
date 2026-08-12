@@ -217,15 +217,6 @@ const SETTINGS = {
 
   // where it ends up at the BOTTOM of the page
   end:   { distance: 3.9, height: 1.6, angle: 340 }
-
-  // distance: how far the camera sits from the donut. smaller = closer
-  // height:   how high above it. 0 is level with the middle,
-  //           2 is looking down on it, -1 is looking up from below
-  // angle:    where the camera sits around the circle, in degrees.
-  //           0 is the front, 90 is the right side, 180 is behind,
-  //           270 is the left. the gap between start and end is how
-  //           far it travels: -20 to 320 is almost a full lap.
-
 };
 
 /* ================================================================== */
@@ -276,22 +267,20 @@ loader.load('model.glb', (gltf) => {
 
   // TILT. these are in radians, not degrees. 0.10 is about 6 degrees,
   // 1.57 is 90 degrees. minus tilts the other way.
-  model.rotation.z = -0.10;          //roll, side to side
-  model.rotation.x = -0.30;       //lean it toward or away
-   model.rotation.y = 0.50;       // turn which face you see
+  model.rotation.z = -0.10;      //roll, side to side
+  model.rotation.x = -0.30;      //lean it toward or away
+  model.rotation.y = 0.50;       // turn which face you see
 
   // NUDGE IT OFF CENTRE. by default it sits dead centre of the screen.
   model.position.x += 0.7;       // uncomment to shift it right
   // model.position.y += 0.3;       // uncomment to lift it up
 
-  pivot.add(model);//then placed inside the pivot
+  pivot.add(model);
 
 }, undefined, (err) => console.error('model.glb failed to load:', err));
 
 
-/* --- DRAG TO SPIN ---
-   Your mouse turns the model. */
-
+/* --- DRAG TO SPIN --- */
 let dragging = false, lastX = 0, turn = 0, speed = 0;
 const canvas = renderer.domElement;
 
@@ -307,7 +296,12 @@ addEventListener('pointermove', (e) => {
   speed += (e.clientX - lastX) * 0.0008;
 
   lastX = e.clientX;
+  //Take your mouse's current position (e.clientX), 
+  //subtract where it was a split second ago (lastX) 
+  //that tells us how many pixels you just moved, left or right. Shrink that 
+  //number down a lot (* 0.0008), and add it onto speed
 });
+
 
 
 /* --- SCROLL MOVES THE CAMERA ---
@@ -323,7 +317,7 @@ function readScroll() {
 addEventListener('scroll', readScroll, { passive: true });
 readScroll();
 
-const mix = (a, b, t) => a + (b - a) * t;   // gives you a point between two numbers
+const mix = (a, b, t) => a + (b - a) * t;   //t% of a and b
 
 // the three boxes in the header
 const cx = document.getElementById('cx');
@@ -340,10 +334,8 @@ function animate() {
 
   const dt = clock.getDelta();   // seconds since the last frame, about 0.016
 
-
   /* SPIN --------------------------------------------------------------
-     Three things add together: your drag, the friction eating it away,
-     and the constant turn from SETTINGS.                              */
+     Three things add together: your drag, the friction, and the constant turn from SETTINGS.                              */
 
   turn += speed + SETTINGS.spin * dt;
 
@@ -387,7 +379,6 @@ function animate() {
   cz.textContent = camera.position.z.toFixed(2);
 }
 animate();
-
 
 /* --- housekeeping, ignore this --- */
 
