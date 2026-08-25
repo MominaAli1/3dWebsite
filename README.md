@@ -1,10 +1,17 @@
-# Mi Donut — 3D Chocolate Donut Viewer
+# 3D Website Tutorial — Interactive Chocolate Donut
 
-A 3D chocolate donut on a webpage. Scroll to move the camera, drag to spin the model.
+A beginner-friendly example of how to put a 3D model on a webpage. Scroll to orbit the camera, drag to spin the model. No frameworks, no build tools — just one HTML file and a `.glb` model.
 
-Made with [three.js](https://threejs.org). Model made in Blender, exported as `.glb`.
+Built with [three.js](https://threejs.org). Model made in Blender, exported as `.glb`.
 
-## Run it
+## What you'll learn
+
+- Loading a 3D model (`.glb`) into a webpage with three.js
+- Scroll-driven camera movement
+- Drag-to-spin interaction
+- How to swap in your own 3D model
+
+## Quick start
 
 ```
 git clone https://github.com/MominaAli1/3dWebsite
@@ -12,60 +19,60 @@ cd 3dWebsite
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000`. Use `python3` on Mac and Linux.
+Open `http://localhost:8000` in your browser. Use `python3` on Mac/Linux.
 
-Don't double-click `index.html`. The model won't load without a server.
+> **Note:** You must use a local server. Double-clicking `index.html` won't load the model.
 
 ## Files
 
-`index.html` — layout, styling, and all the three.js code
-`model.glb` — the 3D model
+| File | What it is |
+|---|---|
+| `index.html` | All the HTML, CSS, and three.js code in one file |
+| `model.glb` | The 3D chocolate donut model |
 
 ## Use your own model
 
-Replace `model.glb`, keep the filename. The code centres and resizes it automatically.
+Replace `model.glb` with your own file (keep the same filename). The code auto-centres and resizes it.
 
-From Blender: File > Export > glTF 2.0, format `.glb`, compression off.
-Or grab one from [Sketchfab](https://sketchfab.com).
+**From Blender:** File > Export > glTF 2.0, format `.glb`, compression off.
+**Or grab one from:** [Sketchfab](https://sketchfab.com)
 
-## Change the animation
+## Customise it
 
-Edit the `SETTINGS` block near the top of the `<script>`.
+Edit the `SETTINGS` block near the top of the `<script>` tag in `index.html`:
 
 | Setting | What it does |
 |---|---|
-| `modelSize` | bigger number, bigger model |
-| `lens` | low is zoomed and flat, high is wide and distorted |
-| `brightness` | exposure |
-| `spin` | constant rotation. 0 is still, minus flips direction |
-| `drift` | how lazily the camera follows scroll. 1 snaps, 0.02 floats |
+| `modelSize` | bigger number = bigger model |
+| `lens` | low = zoomed/flat, high = wide/distorted |
+| `brightness` | exposure level |
+| `spin` | auto-rotation speed. 0 = still, negative = reverse |
+| `drift` | camera lag on scroll. 1 = instant, 0.02 = floaty |
 | `start` | camera position at the top of the page |
 | `end` | camera position at the bottom |
 
-`start` and `end` each hold three numbers:
+`start` and `end` each take three values:
 
 - **distance** — how far from the model
-- **height** — 0 is level, 2 looks down, -1 looks up
-- **angle** — degrees. 0 is front, 90 is right, 180 is behind
+- **height** — 0 = level, 2 = looking down, -1 = looking up
+- **angle** — degrees. 0 = front, 90 = right, 180 = behind
 
 ## How it works
 
-Scroll becomes a number from 0 to 1. Top is 0, bottom is 1. Multiply that number by anything you want to move.
-
-The spin is separate. Dragging adds speed, and `speed *= 0.94` shaves 6% off every frame until it stops.
-
-Everything that moves lives in `animate()`, which runs 60 times a second.
+1. Scroll position becomes a number from 0 (top) to 1 (bottom)
+2. That number blends between the `start` and `end` camera positions
+3. Dragging the model adds rotational speed, which decays over time (`speed *= 0.94`)
+4. Everything that moves runs inside `animate()`, called ~60 times per second
 
 ## Deploy
 
-Any static host. GitHub Pages, Vercel, Netlify. No build step.
+Any static host works — GitHub Pages, Vercel, Netlify. No build step needed.
 
-## If it breaks
+## Troubleshooting
 
-**Blank page** — open the console (F12), it names the broken line.
-
-**No model** — check the Network tab for `model.glb`. 404 means wrong path or wrong capitalisation.
-
-**"No DRACOLoader instance provided"** — your `.glb` is compressed. Re-export with compression off.
-
-**Can't see it** — raise `modelSize`, or lower `distance`.
+| Problem | Fix |
+|---|---|
+| Blank page | Open browser console (F12) to see the error |
+| Model doesn't load | Check the Network tab for `model.glb`. A 404 means wrong path or filename |
+| "No DRACOLoader instance provided" | Your `.glb` is compressed. Re-export with compression off |
+| Model is invisible | Increase `modelSize` or decrease `distance` |
