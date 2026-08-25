@@ -69,3 +69,4 @@ Any static host. GitHub Pages, Vercel, Netlify. No build step.
 **"No DRACOLoader instance provided"** — your `.glb` is compressed. Re-export with compression off.
 
 **Can't see it** — raise `modelSize`, or lower `distance`.
+Experiment and explore!!!
