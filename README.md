@@ -1,6 +1,6 @@
-# Mi Donut
+# Mi Donut — 3D Chocolate Donut Viewer
 
-A 3D donut on a webpage. Scroll to move the camera.
+A 3D chocolate donut on a webpage. Scroll to move the camera, drag to spin the model.
 
 Made with [three.js](https://threejs.org). Model made in Blender, exported as `.glb`.
 
